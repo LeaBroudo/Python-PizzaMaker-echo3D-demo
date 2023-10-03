@@ -1,4 +1,0 @@
-pytest
-pytest-cov
-
-Pmw-py3==2.1
