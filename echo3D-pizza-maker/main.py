@@ -55,7 +55,7 @@ class PizzaDemo(ShowBase):
         # This code puts the standard title and instruction text on screen
         self.title = OnscreenText(text="Echo3D Python Tutorial - Pizza Maker",
                                   style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1),
-                                  pos=(0.8, -0.95), scale = .07)
+                                  pos=(0.5, -0.95), scale = .07)
         self.loading = OnscreenText(text="",
                                     style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1), 
                                     pos=(0, 0), scale = .07)
@@ -109,11 +109,9 @@ class PizzaDemo(ShowBase):
         self.initializeEnv()
             
         return 0
-        
+    
+                    
     def initializeEnv(self):
-
-        self.skybox = loader.loadModel("downloads/"+MODELS["Skybox"]+"/Skybox.glb") 
-        self.skybox.reparentTo(render)
 
         # start of mushrooms in toppings list, will increase/decrease
         # depending on if mushrooms are added or removed from the available ingredients
@@ -122,95 +120,30 @@ class PizzaDemo(ShowBase):
         self.PLATE_C_IDX = 104
         self.PLATE_D_IDX = 124
 
-        # Now we create the pizza board and its toppings
-        self.environment = render.attachNewNode("environment")
-
-        # TODO: ingredient plates
-        self.mushroomPlate = loader.loadModel(getModelFilePath("plate"))
-        self.mushroomPlate.reparentTo(self.environment)
-        self.mushroomPlate.setPos(SquarePos(64))
-        self.mushroomPlate.setScale(5)
-        self.mushroomPlate.setHpr(0,90,0)
-
-        mushrooms = [None for i in range(20)]
-        platePos = self.mushroomPlate.getPos()
+        # For each square
+        self.squares = [None for i in range(64+4)]
+        self.toppings = [None for i in range(64)]
         
-        for i in range(10):
-            rnd = random.uniform(-1, 1)
-            mushrooms[i] = Mushroom(i)
-            mushrooms[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
+        self.loadEnvironmentModels()
+        self.loadSquaresForCollisions()
 
-        # TODO: ingredient plates
-        self.pepperoniPlate = loader.loadModel(getModelFilePath("plate"))
-        self.pepperoniPlate.reparentTo(self.environment)
-        self.pepperoniPlate.setPos(SquarePos(65))
-        self.pepperoniPlate.setScale(5)
-        self.pepperoniPlate.setHpr(0,90,0)
-
-        pepperonis = [None for i in range(20)]
-        platePos = self.pepperoniPlate.getPos()
-        for i in range(10):
-            rnd = random.uniform(-1, 1)
-            pepperonis[i] = Pepperoni(i)
-            pepperonis[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
-
-        # TODO: ingredient plates
-        self.broccoliPlate = loader.loadModel(getModelFilePath("plate"))
-        self.broccoliPlate.reparentTo(self.environment)
-        self.broccoliPlate.setPos(SquarePos(66))
-        self.broccoliPlate.setScale(5)
-        self.broccoliPlate.setHpr(0,90,0)
-
-        broccolis = [None for i in range(20)]
-        platePos = self.broccoliPlate.getPos()
-        for i in range(10):
-            rnd = random.uniform(-1, 1)
-            broccolis[i] = Broccoli(i)
-            broccolis[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
-
-        # TODO: ingredient plates
-        self.pepperPlate = loader.loadModel(getModelFilePath("plate"))
-        self.pepperPlate.reparentTo(self.environment)
-        self.pepperPlate.setPos(SquarePos(67))
-        self.pepperPlate.setScale(5)
-        self.pepperPlate.setHpr(0,90,0)
-
-        peppers = [None for i in range(20)]
-        platePos = self.pepperPlate.getPos()
-        for i in range(10):
-            rnd = random.uniform(-1, 1)
-            peppers[i] = Pepper(i)
-            peppers[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
-
-
-        self.plate = loader.loadModel(getModelFilePath("plate"))
-        self.plate.reparentTo(self.environment)
-        self.plate.setPos(LPoint3(0,0,-1.4))
-        self.plate.setScale(14)
-        self.plate.setHpr(0,90,0)
-
-        self.pizza = loader.loadModel(getModelFilePath("emptyPizza"))
-        self.pizza.reparentTo(self.environment)
-        self.pizza.setPos(LPoint3(-4.5,2.3,-0.44))
-        self.pizza.setScale(0.45)
-
+        # Start the task that handles the picking
+        self.mouseTask = taskMgr.add(self.mouseTask, 'mouseTask')
+        self.accept("mouse1", self.grabTopping)  # left-click grabs a topping
+        self.accept("mouse1-up", self.releaseTopping)  # releasing places it
+    
+    def loadSquaresForCollisions(self):
         # We will attach all of the squares to their own root. This way we can do the
         # collision pass just on the squares and save the time of checking the rest
         # of the scene
         self.squareRoot = render.attachNewNode("squareRoot")
-
-        # For each square
-        self.squares = [None for i in range(64+4)]
-        self.toppings = [None for i in range(64)]
-
-        # add mushrooms
-        self.toppings.extend(mushrooms)
-        self.toppings.extend(pepperonis)
-        self.toppings.extend(broccolis)
-        self.toppings.extend(peppers)
+        # This will represent the index of the currently highlited square
+        self.hiSq = False
+        # This wil represent the index of the square where currently dragged topping
+        # was grabbed from
+        self.dragging = False
             
-            
-        for i in range(64+4):
+        for i in range(68):
 
             arr = [0,1,6,7,8,15]
             shouldSkip = False
@@ -229,42 +162,70 @@ class PizzaDemo(ShowBase):
             self.squares[i].setPos(SquarePos(i))
             # Set the model itself to be collideable with the ray. If this model was
             # any more complex than a single polygon, you should set up a collision
-            # sphere around it instead. But for single polygons this works
-            # fine.
+            # sphere around it instead. But for single polygons this works fine.
             self.squares[i].find("**/polygon").node().setIntoCollideMask(
                 BitMask32.bit(1))
             # Set a tag on the square's node so we can look up what square this is
             # later during the collision pass
             self.squares[i].find("**/polygon").node().setTag('square', str(i))
 
-            # Don't add more toppings to the plates
-            if i >= 64: 
-                continue
-            
-            # Add toppings
-            rnd = random.randint(0,6)
-            if (rnd == 0):
-                self.toppings[i] = Broccoli(i)
-            elif (rnd == 1):
-                self.toppings[i] = Pepperoni(i)
-            elif (rnd == 2):
-                self.toppings[i] = Mushroom(i)
-            elif (rnd == 3):
-                self.toppings[i] = Pepper(i)
+            # Add toppings to pizza
+            if i < 64: 
+                # Add toppings
+                rnd = random.randint(0,6)
+                if (rnd == 0):
+                    self.toppings[i] = Broccoli(i)
+                elif (rnd == 1):
+                    self.toppings[i] = Pepperoni(i)
+                elif (rnd == 2):
+                    self.toppings[i] = Mushroom(i)
+                elif (rnd == 3):
+                    self.toppings[i] = Pepper(i)
 
+    def loadEnvironmentModels(self):
+        # Now we create the pizza board and its toppings
+        self.environment = render.attachNewNode("environment")
+        self.skybox = loader.loadModel(getModelFilePath("Skybox.glb")) 
+        self.skybox.reparentTo(self.environment)
+
+        self.plate = loader.loadModel(getModelFilePath("plate.obj"))
+        self.plate.reparentTo(self.environment)
+        self.plate.setPos(LPoint3(0,0,-1.4))
+        self.plate.setScale(14)
+        self.plate.setHpr(0,90,0)
+
+        self.pizza = loader.loadModel(getModelFilePath("emptyPizza.obj"))
+        self.pizza.reparentTo(self.environment)
+        self.pizza.setPos(LPoint3(-4.5,2.3,-0.44))
+        self.pizza.setScale(0.45)
+
+        self.mushroomPlate = None
+        self.pepperoniPlate = None
+        self.broccoliPlate = None
+        self.pepperPlate = None
+
+        self.createToppingPlate(self.mushroomPlate, SquarePos(64), Mushroom)
+        self.createToppingPlate(self.pepperoniPlate, SquarePos(65), Pepperoni)
+        self.createToppingPlate(self.broccoliPlate, SquarePos(66), Broccoli)
+        self.createToppingPlate(self.pepperPlate, SquarePos(67), Pepper)
+
+    def createToppingPlate(self, plate, pos, ToppingClass,):
+        plate = loader.loadModel(getModelFilePath("plate.obj"))
+        plate.reparentTo(self.environment)
+        plate.setPos(pos)
+        plate.setScale(5)
+        plate.setHpr(0,90,0)
+
+        newToppings = [None for i in range(20)]
+        platePos = plate.getPos()
         
-            
-        # This will represent the index of the currently highlited square
-        self.hiSq = False
-        # This wil represent the index of the square where currently dragged topping
-        # was grabbed from
-        self.dragging = False
+        for i in range(10):
+            rnd = random.uniform(-1, 1)
+            newToppings[i] = ToppingClass(i)
+            newToppings[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
 
-        # Start the task that handles the picking
-        self.mouseTask = taskMgr.add(self.mouseTask, 'mouseTask')
-        self.accept("mouse1", self.grabTopping)  # left-click grabs a topping
-        self.accept("mouse1-up", self.releaseTopping)  # releasing places it
-    
+        self.toppings.extend(newToppings)
+
     # This function swaps the positions of two toppings
     def swapToppings(self, fr, to, hiSq):
         temp = self.toppings[fr]
@@ -279,8 +240,7 @@ class PizzaDemo(ShowBase):
 
     def mouseTask(self, task):
 
-        # Check to see if we can access the mouse. We need it to do anything
-        # else
+        # Check to see if we can access the mouse. We need it to do anything else
         if self.mouseWatcherNode.hasMouse():
             # get the mouse position
             mpos = self.mouseWatcherNode.getMouse()
@@ -293,13 +253,10 @@ class PizzaDemo(ShowBase):
             if self.dragging is not False:
                 # Gets the point described by pickerRay.getOrigin(), which is relative to
                 # camera, relative instead to render
-                nearPoint = render.getRelativePoint(
-                    camera, self.pickerRay.getOrigin())
+                nearPoint = render.getRelativePoint(camera, self.pickerRay.getOrigin())
                 # Same thing with the direction of the ray
-                nearVec = render.getRelativeVector(
-                    camera, self.pickerRay.getDirection())
-                self.toppings[self.dragging].obj.setPos(
-                    PointAtZ(.5, nearPoint, nearVec))
+                nearVec = render.getRelativeVector(camera, self.pickerRay.getDirection())
+                self.toppings[self.dragging].obj.setPos(PointAtZ(.5, nearPoint, nearVec))
 
             # Do the actual collision pass (Do it only on the squares for
             # efficiency purposes)
@@ -318,8 +275,7 @@ class PizzaDemo(ShowBase):
         await Task.pause(0.1) 
 
     def grabTopping(self):
-        # If a square is highlighted and it has a topping, set it to dragging
-        # mode
+        # If a square is highlighted and it has a topping, set it to dragging mode
         if (self.hiSq is False):
             return
         
@@ -340,11 +296,6 @@ class PizzaDemo(ShowBase):
                 self.PLATE_D_IDX = self.PLATE_D_IDX + 1
         else:
             toppingIdx = self.hiSq
-
-        print("-----")
-        print("self.toppings[toppingIdx]: "+str(self.toppings[toppingIdx]))
-        print("hiSq: "+str(self.hiSq))
-        print("toppingIdx: "+str(toppingIdx))
 
         if self.toppings[toppingIdx]:
             self.dragging = toppingIdx
@@ -377,11 +328,6 @@ class PizzaDemo(ShowBase):
                         toppingIdx = self.PLATE_D_IDX
                 else:
                     toppingIdx = self.hiSq
-
-                print("-----")
-                print("self.dragging: "+str(self.dragging))
-                print("hiSq: "+str(self.hiSq))
-                print("toppingIdx: "+str(toppingIdx))
 
                 # Otherwise, swap the toppings
                 self.swapToppings(self.dragging, toppingIdx, self.hiSq)
@@ -416,32 +362,31 @@ class Topping(object):
 # would be to make an isValidMove(toSquare) method for each topping type
 # and then check if the destination square is acceptible during ReleaseTopping
 def getModelFilePath(modelName):
-    return "downloads/"+MODELS[modelName]+"/"+modelName+".obj"
+    return "downloads/"+MODELS[modelName]+"/"+modelName
         
 class Broccoli(Topping):
-    model = getModelFilePath('broccoli')
+    model = getModelFilePath("broccoli.obj")
     scale = 1.5
-    rot = [0, 0, 0] #Do this in echo3d metadata?
+    rot = [0, 0, 0]
 
 class Mushroom(Topping):
-    model = getModelFilePath('mushroom')
+    model = getModelFilePath("mushroom.obj")
     scale = 4
     rot = [0, 0, 0]
 
 class Pepper(Topping):
-    model = getModelFilePath('paprikaSlice')
+    model = getModelFilePath("paprikaSlice.obj")
     scale = 4
     rot = [0, 90, 0]
 
 class Pepperoni(Topping):
-    model = getModelFilePath('pepperoni')
+    model = getModelFilePath("pepperoni.obj")
     scale = 4
     rot = [0, 90, 0]
 
 
-"""
-Parse user arguments 
-"""
+# Parse user arguments 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('api_key', type=str,
@@ -450,8 +395,6 @@ def main():
                         help='Your Echo3D security key')
     
     args = parser.parse_args()
-    if error_handle(args) == -1:
-        return -1
 
     # Do the main initialization and start 3D rendering
     demo = PizzaDemo(args.api_key, args.security_key)
@@ -459,8 +402,6 @@ def main():
 
     return 0
 
-def error_handle(args):
-    return 0
 
 if __name__ == '__main__':
     main()
