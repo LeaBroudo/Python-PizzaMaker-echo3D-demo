@@ -55,22 +55,21 @@ class PizzaDemo(ShowBase):
         # This code puts the standard title and instruction text on screen
         self.title = OnscreenText(text="Echo3D Python Tutorial - Pizza Maker",
                                   style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1),
-                                  pos=(0.5, -0.95), scale = .07)
+                                  pos=(0, 0.90), scale = .07)
         self.loading = OnscreenText(text="",
                                     style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1), 
                                     pos=(0, 0), scale = .07)
         self.escapeEvent = OnscreenText(
             text="ESC: Quit", parent=base.a2dTopLeft,
-            style=1, fg=(1, 1, 1, 1), pos=(0.06, -0.1),
+            style=1, fg=(1, 1, 1, 1), pos=(0.06, -1.95),
             align=TextNode.ALeft, scale = .05)
-        self.mouse1Event = OnscreenText(
-            text="Left-click and drag: Pick up and drag topping",
-            parent=base.a2dTopLeft, align=TextNode.ALeft,
-            style=1, fg=(1, 1, 1, 1), pos=(0.06, -0.16), scale=.05)
+        self.mouse1Event = OnscreenText(text="It's pizza time! Pick up and drag toppings anywhere onto or off your pizza.",
+                                  style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1),
+                                  pos=(0, 0.80), scale = .05)
 
         
         self.disableMouse()  # Disble mouse camera control
-        camera.setPosHpr(0, -15, 10, 0, -35, 0)  # Set the camera
+        camera.setPosHpr(0, -20, 18, 0, -40, 0)  # Set the camera
         self.setupLights()  # Setup default lighting
 
         # Since we are using collision detection to do picking, we set it up like
@@ -97,20 +96,21 @@ class PizzaDemo(ShowBase):
         
         self.taskMgr.add(self.loadModelsFromEcho3D())
 
+
     async def loadModelsFromEcho3D(self):
         # Retrieve 3d models via Echo3D API
-        api = Echo3DAPI(api_key=self.apiKey, security_key=self.securityKey)
+        # api = Echo3DAPI(api_key=self.apiKey, security_key=self.securityKey)
 
-        for model in MODELS:
-            await self.updateLoadingText(model)
-            api.retrieve(MODELS[model])
+        # for model in MODELS:
+        #     await self.updateLoadingText(model)
+        #     api.retrieve(MODELS[model])
 
         self.loading.destroy()
         self.initializeEnv()
             
         return 0
-    
-                    
+
+      
     def initializeEnv(self):
 
         # start of mushrooms in toppings list, will increase/decrease
@@ -212,7 +212,7 @@ class PizzaDemo(ShowBase):
     def createToppingPlate(self, plate, pos, ToppingClass,):
         plate = loader.loadModel(getModelFilePath("plate.obj"))
         plate.reparentTo(self.environment)
-        plate.setPos(pos)
+        plate.setPos(pos+LPoint3(0,0,-0.21))
         plate.setScale(5)
         plate.setHpr(0,90,0)
 
@@ -222,7 +222,7 @@ class PizzaDemo(ShowBase):
         for i in range(10):
             rnd = random.uniform(-1, 1)
             newToppings[i] = ToppingClass(i)
-            newToppings[i].obj.setPos(LPoint3(platePos.x+rnd, platePos.y+rnd, 0.5))
+            newToppings[i].obj.setPos(LPoint3(pos.x+rnd, pos.y+rnd, pos.z))
 
         self.toppings.extend(newToppings)
 
