@@ -14,12 +14,15 @@ from utils import *
 import argparse
 import random
 
+###################### ECHO3D PIZZA DEMO ######################
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 #  This tutorial shows how to retrieve 3D models from echo3D  #
-#  using Python, and load them into a Panda3d game. 
-#  
-#  
-#  
+#  using Python, and load them into a Panda3D game. The app   #
+#  allows you to design your own pizza given the available    #
+#  pepperoni, mushroom, broccoli, or pepper toppings. You can #
+#  click on any pizza topping, whether on the pizza or on the #
+#  extra topping plates, to pick up and move the topping to   #
+#  your desired location.                                     #
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 class PizzaDemo(ShowBase):
@@ -31,14 +34,19 @@ class PizzaDemo(ShowBase):
         # Creates a window and sets up everything we need for rendering into it.
         ShowBase.__init__(self)
 
-        self.accept('escape', ExitGame)
-        self.loadUI()
-        self.disableMouse()  # Disble mouse camera control
+        self.accept('escape', ExitGame) # Setup graceful quitting
+        self.loadUI() # Setup loading UI
+        self.disableMouse()  # Disable mouse camera control
         camera.setPosHpr(0, -20, 18, 0, -40, 0)  # Set the camera
         self.setupLights()  # Setup default lighting
-        self.setUpCollisionDetection()
+        self.setUpCollisionDetection() # Enable collision to move pizza toppings
+
+        # Add keys for use in concurrent task
+        self.apiKey = api_key
+        self.securityKey = security_key
         
-        self.taskMgr.add(self.retrieveModelsFromEcho3D(api_key, security_key))
+        # Call echo3D to retrieve assets
+        self.taskMgr.add(self.retrieveModelsFromEcho3D())
 
     """
     Adds the title and instruction text on screen
@@ -83,8 +91,8 @@ class PizzaDemo(ShowBase):
     Retrieve 3D models from echo3D, show loading progress throughout,
     and initialize game environment on completion. 
     """
-    async def retrieveModelsFromEcho3D(self, apiKey, securityKey):
-        api = Echo3DAPI(api_key=apiKey, security_key=securityKey)
+    async def retrieveModelsFromEcho3D(self):
+        api = Echo3DAPI(api_key=self.apiKey, security_key=self.securityKey)
 
         # Iterate through constants and 
         # retrieve asset from echo3D

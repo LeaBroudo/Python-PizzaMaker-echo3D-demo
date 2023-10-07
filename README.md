@@ -1,4 +1,4 @@
-# Unity-PizzaMaker-echo3D-demo-python
+# Python-PizzaMaker-echo3D-demo
  
 This Python demo uses echo3D's 3D model streaming in combination with [Panda3D](https://www.panda3d.org/), a framework for 3D rendering and game development in Python. Currently, any .obj or .glb model can be uploaded to the echo3D console and streamed into this app. The app allows you to design your own pizza given the available pepperoni, mushroom, broccoli, or pepper toppings. You can click on any pizza topping, whether on the pizza or on the extra topping plates, to pick up and move the topping to your desired location. However, feel free to use [echo3D's expansive functionality](https://docs.echo3d.com/) to modify the toppings to your pizza-preferences!
 
@@ -31,7 +31,7 @@ If you want more demos of Panda3D's technology, there are additional demos creat
 Feel free to reach out at [support@echo3D.co](mailto:support@echo3D.co) or join our [support channel on Slack](https://go.echo3D.co/join).
 
 ## Screenshots
-![demo](media/gameplay.gif)
-![loading](media/loading_video.gif)
+![PizzaMakerDemo](media/gameplay.gif)
+![LoadingEcho3DAssets](media/loading.gif)
 
 Demo created by [LeaBroudo](https://github.com/LeaBroudo/).
